@@ -61,3 +61,44 @@ Got it — here’s a **general, short and precise guide** for working on your p
 ✅ This keeps everyone independent, avoids breaking the project, and still keeps your branch in sync.
 
 Do you want me to also give you a **one-page Git cheatsheet** (all commands in order) that you and your teammates can copy-paste as daily routine?
+
+
+🔹 Steps to Push Frontend Changes to main
+
+Make sure you’re on your frontend branch
+
+git checkout frontend-saini
+
+
+Stage and commit your frontend changes
+From inside app/frontend/ (or repo root):
+
+git add app/frontend/
+git commit -m "Frontend: updated UI and features"
+
+
+Update your branch with the latest main
+(so you don’t overwrite backend/data updates)
+
+git checkout main
+git pull origin main
+git checkout frontend-saini
+git merge main
+
+
+If there are conflicts, fix them, then:
+
+git add .
+git commit -m "Resolved merge conflicts"
+
+
+Push your branch
+
+git push origin frontend-saini
+
+
+Open a Pull Request (PR) on GitHub
+
+Go to your repo → click Compare & Pull Request for frontend-saini → main.
+
+QA/lead reviews and merges.
