@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+streamlit
+plotly
+streamlit-folium
+folium
+xarray
+netCDF4
+pandas
+pyarrow
+SQLAlchemy
+psycopg[binary]
+chromadb
+python-dotenv
