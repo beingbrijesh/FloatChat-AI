@@ -1,0 +1,14 @@
+For Data Handling and Manipulation
+pandas==2.2.2
+numpy==1.26.4
+
+For Reading NetCDF (.nc) Files
+xarray==2024.6.0
+netCDF4==1.6.5
+
+For Database Connection (PostgreSQL)
+SQLAlchemy==2.0.31
+psycopg2-binary==2.9.9
+
+For Progress Bars in the ETL script
+tqdm==4.66.4

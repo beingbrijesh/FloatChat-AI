@@ -1,0 +1,224 @@
+# ===================================================================================
+#
+#               ARGO FLOAT DATA - MASTER DEVELOPMENT PLAN & SCRIPT
+#
+# This file serves as the complete blueprint for the Argo Data ETL and AI project.
+# It contains all necessary SQL commands, Python code snippets, and step-by-step
+# instructions to guide you from initial setup to the final interactive application.
+#
+# For actual execution, the Python code sections should be saved into their
+# respective files: etl_argo.py, train_argo_model.py, ask_argo_model.py, etc.
+#
+# ===================================================================================
+
+# ===================================================================================
+# PHASE 1: DATA INGESTION & WAREHOUSING (THE ETL FOUNDATION)
+# ===================================================================================
+
+# --- Step 1.1: Environment Setup ---
+#
+# Action: Create a `requirements.txt` file with the content below.
+# Then, in your terminal, create a virtual environment and run:
+# > python -m venv venv
+# > venv\Scripts\activate  (or source venv/bin/activate on Linux/macOS)
+# > pip install -r requirements.txt
+#
+"""
+# requirements.txt
+pandas
+numpy
+xarray
+netCDF4
+SQLAlchemy
+psycopg2-binary
+tqdm
+xgboost
+scikit-learn
+joblib
+streamlit
+plotly
+"""
+
+# --- Step 1.2: Database Base Schema ---
+#
+# Action: Connect to your PostgreSQL server and run this SQL script once.
+# This creates the minimal tables. The ETL script will add other columns dynamically.
+#
+SQL_BASE_SCHEMA = """
+DROP TABLE IF EXISTS tech CASCADE;
+DROP TABLE IF EXISTS profiles CASCADE;
+DROP TABLE IF EXISTS meta CASCADE;
+DROP TABLE IF EXISTS processedfiles CASCADE;
+
+-- Parent table for static float metadata
+CREATE TABLE meta (
+    platform_number VARCHAR(32) PRIMARY KEY,
+    last_updated TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Child table for profile-specific data
+CREATE TABLE profiles (
+    platform_number VARCHAR(32) NOT NULL,
+    cycle_number INTEGER NOT NULL,
+    PRIMARY KEY (platform_number, cycle_number),
+    CONSTRAINT fk_meta FOREIGN KEY(platform_number) REFERENCES meta(platform_number) ON DELETE CASCADE
+);
+
+-- Child table for technical data
+CREATE TABLE tech (
+    platform_number VARCHAR(32) NOT NULL,
+    cycle_number INTEGER NOT NULL,
+    PRIMARY KEY (platform_number, cycle_number),
+    CONSTRAINT fk_meta FOREIGN KEY(platform_number) REFERENCES meta(platform_number) ON DELETE CASCADE
+);
+
+-- Utility table for tracking processed files
+CREATE TABLE processedfiles (
+    filename TEXT PRIMARY KEY,
+    processed_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+"""
+
+# --- Step 1.3: The ETL Script (etl_argo.py) ---
+#
+# Action: Save the following logic into a file named `etl_argo.py`.
+# This script handles the core task of populating your database.
+#
+def etl_script_logic():
+    # This is a placeholder for the full etl_argo.py script logic.
+    # Key functions within that script:
+    #
+    # sync_schema(engine, table_name, df):
+    #   - Connects to the DB.
+    #   - Gets existing columns from the information_schema.
+    #   - Compares with columns in the new DataFrame.
+    #   - Executes `ALTER TABLE ... ADD COLUMN ...` for any missing columns.
+    #
+    # process_generic_file(ds):
+    #   - Reads an xarray dataset.
+    #   - Extracts all 0D and 1D variables into a dictionary.
+    #   - Creates a single-row pandas DataFrame.
+    #
+    # main():
+    #   - Defines folders to watch (meta_files, prof_files, tech_files).
+    #   - Loops through files in each folder.
+    #   - For each file:
+    #       1. Calls process_generic_file() to create a DataFrame.
+    #       2. Calls sync_schema() to ensure the DB table is ready.
+    #       3. Calls upsert_bulk() to load the data.
+    #       4. Moves the processed file to the 'processed' folder.
+    pass
+
+# --- Step 1.4: Creating the Master View for AI ---
+#
+# Action: After running the ETL script, connect to your database and run this
+# SQL command. This creates a single, flat "table" that joins all your data,
+# making it easy to access for model training.
+#
+SQL_CREATE_VIEW = """
+CREATE OR REPLACE VIEW training_data AS
+SELECT
+    -- Profile Features
+    p.platform_number,
+    p.cycle_number,
+    p.latitude,
+    p.longitude,
+    p.direction,
+    p.juld,
+
+    -- Meta Features
+    m.platform_type,
+    m.project_name,
+    m.pi_name,
+
+    -- Measurement Values (Assuming TEMP, PRES, PSAL were in your profile files)
+    -- This is the target we will predict
+    p.temp AS target_temperature,
+    p.pres AS pressure,
+    p.psal AS salinity
+
+FROM
+    profiles p
+JOIN
+    meta m ON p.platform_number = m.platform_number
+WHERE
+    p.latitude IS NOT NULL
+    AND p.longitude IS NOT NULL
+    AND p.temp IS NOT NULL
+    AND p.pres IS NOT NULL;
+"""
+
+
+# ===================================================================================
+# PHASE 2: AI MODEL DEVELOPMENT (TRAINING & OPTIMIZATION)
+# ===================================================================================
+#
+# Action: Save the following logic into `train_argo_model.py`.
+#
+def training_script_logic():
+    # This is a placeholder for the full train_argo_model.py script.
+    # Key functions and logic:
+    #
+    # get_training_data():
+    #   - Connects to the database.
+    #   - Executes `SELECT * FROM training_data;`.
+    #   - Performs Feature Engineering:
+    #       - Converts 'juld' to 'month' and 'day_of_year'.
+    #       - Converts categorical columns ('direction', etc.) to numerical
+    #         using `pd.get_dummies()`.
+    #   - Drops unneeded columns and handles missing values.
+    #
+    # train_model(df):
+    #   - Separates data into features (X) and target (y = 'target_temperature').
+    #   - Splits data into training and testing sets using `train_test_split`.
+    #   - Initializes the XGBoost Regressor (`xgb.XGBRegressor`).
+    #       - `n_jobs=-1`: Uses all CPU cores for maximum efficiency.
+    #       - `early_stopping_rounds=50`: Prevents overfitting and saves time.
+    #   - Trains the model using `xgbr.fit()`.
+    #   - Evaluates performance using Root Mean Squared Error (RMSE).
+    #   - Saves BOTH the model and the list of training columns using `joblib.dump()`.
+    #     This is critical for the prediction app.
+    #
+    # main():
+    #   - Calls get_training_data().
+    #   - Calls train_model().
+    pass
+
+
+# ===================================================================================
+# PHASE 3: INTERACTIVE APPLICATION (PREDICTION & VISUALIZATION)
+# ===================================================================================
+#
+# Action: Save the following logic into `ask_argo_model.py`.
+#
+def interactive_app_logic():
+    # This is a placeholder for the full ask_argo_model.py script.
+    # Key components and logic:
+    #
+    # Setup:
+    #   - Set page config: `st.set_page_config()`.
+    #   - Load the saved model and training columns using `joblib.load()` and
+    #     `@st.cache_resource` to prevent reloading on every interaction.
+    #
+    # UI Elements:
+    #   - Use `st.sidebar.slider()` and `st.sidebar.select_slider()` to get
+    #     user inputs for latitude, longitude, pressure, and month.
+    #
+    # Prediction:
+    #   - `preprocess_input(user_inputs, training_columns)`: A crucial function
+    #     that takes the slider values and creates a new DataFrame that has the
+    #     EXACT same columns and order as the one the model was trained on.
+    #   - `model.predict(input_vector)`: Runs the prediction.
+    #
+    # Visualization:
+    #   - `get_contextual_data()`: A function that runs a NEW SQL query to fetch
+    #     REAL data points from the database that are geographically and
+    #     temporally close to the user's query.
+    #   - `px.scatter()`: Creates a Plotly scatter plot of the real data.
+    #   - `fig.add_trace()`: Adds a distinct marker (e.g., a red star) to the
+    #     plot showing the AI model's prediction.
+    #   - `st.plotly_chart(fig)`: Displays the interactive chart.
+    pass
+
+print("This master plan script provides a complete project overview.")
+print("To execute, please separate the logic into the respective .py files.")
